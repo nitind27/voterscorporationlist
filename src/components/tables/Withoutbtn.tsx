@@ -136,7 +136,7 @@ export function Withoutbtn<T>({
                 <tr key={index} className="hover:bg-gray-50">
                   {columns.map((column) => (
                     <td key={String(column.key)} className="px-6 py-4 whitespace-nowrap">
-                      {column.render(item)}
+                      {column.render(item, index)}
                     </td>
                   ))}
                 </tr>

@@ -123,6 +123,16 @@ const CorporationList: React.FC = () => {
   // Columns for Corporation List
   const corporationListColumns: Column<CorporationListData>[] = useMemo(() => [
     {
+      key: 'serial_number',
+      label: 'Sr. No.',
+      accessor: 'Voter_Id',
+      render: (data, index = 0) => (
+        <span className="font-mono text-sm font-medium text-blue-600">
+          {(currentPage - 1) * 50 + index + 1}
+        </span>
+      ),
+    },
+    {
       key: 'Voter_Id',
       label: 'Voter ID',
       accessor: 'Voter_Id',

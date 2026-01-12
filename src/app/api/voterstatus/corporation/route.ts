@@ -11,14 +11,13 @@ export async function GET(request: Request) {
 
     // Get total count
     const [countResult] = await pool.query<RowDataPacket[]>(
-      'SELECT COUNT(*) as total FROM tbl_voters_search WHERE updated_at IS NOT NULL'
+      'SELECT COUNT(*) as total FROM tbl_voters_search'
     );
     const total = countResult[0].total;
 
     // Get paginated data
     const [rows] = await pool.query<RowDataPacket[]>(
       `SELECT * FROM tbl_voters_search
-       WHERE updated_at IS NOT NULL
        ORDER BY updated_at DESC
        LIMIT ? OFFSET ?`,
       [limit, offset]
