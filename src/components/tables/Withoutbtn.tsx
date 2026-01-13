@@ -24,6 +24,8 @@ interface WithoutbtnProps<T> {
   onPageChange?: (page: number) => void;
   filterValue?: string;
   onFilterChange?: (value: string) => void;
+  onSearchChange?: (searchTerm: string) => void; // Callback for search changes
+  searchValue?: string; // External search value for controlled component
 }
 
 export function Withoutbtn<T>({
@@ -38,23 +40,41 @@ export function Withoutbtn<T>({
   onPageChange,
   filterValue: externalFilterValue,
   onFilterChange,
+  onSearchChange,
+  searchValue: externalSearchValue,
 }: WithoutbtnProps<T>) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterValue, setFilterValue] = useState('');
 
+  // Use external search value if provided, otherwise use internal state
+  const currentSearchTerm = externalSearchValue !== undefined ? externalSearchValue : searchTerm;
+  
   // Use external filter value if provided, otherwise use internal state
   const currentFilterValue = externalFilterValue !== undefined ? externalFilterValue : filterValue;
   const handleFilterChange = onFilterChange || setFilterValue;
 
+  // Handle search change - if onSearchChange is provided, use it (server-side search)
+  // Otherwise, use local filtering (client-side search)
+  const handleSearchChange = (value: string) => {
+    if (onSearchChange) {
+      // Server-side search - pass to parent
+      onSearchChange(value);
+    } else {
+      // Client-side search - update local state
+      setSearchTerm(value);
+    }
+  };
+
   const filteredData = useMemo(() => {
     let filtered = data;
 
-    // Apply search filter - search across multiple fields
-    if (searchTerm) {
+    // Apply search filter only if NOT using server-side search (onSearchChange)
+    // If onSearchChange is provided, search is handled server-side
+    if (currentSearchTerm && !onSearchChange) {
       const keysToSearch = searchKeys || (searchKey ? [searchKey] : []);
       filtered = filtered.filter((item) =>
         keysToSearch.some((key) =>
-          String(item[key] || '').toLowerCase().includes(searchTerm.toLowerCase())
+          String(item[key] || '').toLowerCase().includes(currentSearchTerm.toLowerCase())
         )
       );
     }
@@ -68,7 +88,7 @@ export function Withoutbtn<T>({
     }
 
     return filtered;
-  }, [data, searchTerm, filterValue, searchKey, filterOptions]);
+  }, [data, currentSearchTerm, filterValue, searchKey, filterOptions, onSearchChange, onFilterChange, currentFilterValue, searchKeys]);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -85,9 +105,9 @@ export function Withoutbtn<T>({
             <input
               type="text"
               placeholder={`Search across all fields...`}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={currentSearchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
             />
           </div>
           {filterOptions.length > 0 && (

@@ -35,6 +35,7 @@ interface BaseVoterData {
   inst_3_paid: string;
   voting_paid: string;
   Booth_Number: string;
+  Sr_No: string;
   Booth_Name: string;
   Booth_Address: string;
   voting_in_transit: string;
@@ -64,12 +65,14 @@ const CorporationList: React.FC = () => {
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedBooth, setSelectedBooth] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch Corporation List data with pagination
-  const fetchCorporationList = useCallback(async (page: number = 1, limit: number = 50) => {
+  // Fetch Corporation List data with pagination and search
+  const fetchCorporationList = useCallback(async (page: number = 1, limit: number = 50, search: string = '') => {
     setCorporationListLoading(true);
     try {
-      const response = await fetch(`/api/voterstatus/corporation?page=${page}&limit=${limit}`);
+      const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+      const response = await fetch(`/api/voterstatus/corporation?page=${page}&limit=${limit}${searchParam}`);
       if (!response.ok) throw new Error('Failed to fetch corporation list');
       const result: ApiResponse = await response.json();
       setCorporationListData(result.data || []);
@@ -87,7 +90,14 @@ const CorporationList: React.FC = () => {
 
   // Handle page change
   const handlePageChange = useCallback((page: number) => {
-    fetchCorporationList(page);
+    fetchCorporationList(page, 50, searchTerm);
+  }, [fetchCorporationList, searchTerm]);
+
+  // Handle search change - reset to page 1 when search changes
+  const handleSearchChange = useCallback((search: string) => {
+    setSearchTerm(search);
+    setCurrentPage(1);
+    fetchCorporationList(1, 50, search);
   }, [fetchCorporationList]);
 
   // Load data on component mount
@@ -112,13 +122,21 @@ const CorporationList: React.FC = () => {
     ];
   }, [corporationListData]);
 
-  // Apply booth filter to data
+  // Apply booth filter to data (only if not searching, as search is handled server-side)
   const filteredData = useMemo(() => {
     if (!selectedBooth) return corporationListData;
     return corporationListData.filter(item =>
       item.Booth_Number === selectedBooth
     );
   }, [corporationListData, selectedBooth]);
+
+  // Handle booth filter change - reset to page 1
+  const handleBoothFilterChange = useCallback((booth: string) => {
+    setSelectedBooth(booth);
+    setCurrentPage(1);
+    // Note: Booth filter is applied client-side on current page data
+    // If you want server-side booth filtering, you'd need to update the API
+  }, []);
 
   // Columns for Corporation List
   const corporationListColumns: Column<CorporationListData>[] = useMemo(() => [
@@ -152,12 +170,12 @@ const CorporationList: React.FC = () => {
       ),
     },
     {
-      key: 'Booth_Number',
-      label: 'Booth Number',
+      key: 'Sr_No',
+      label: 'Sr. No.',
       accessor: 'full_name',
       render: (data) => (
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-black text-bold">{data.Booth_Number || 'N/A'}</span>
+          <span className="text-sm font-medium text-black text-bold">{data.Sr_No || 'N/A'}</span>
         
         </div>
       ),
@@ -196,23 +214,25 @@ const CorporationList: React.FC = () => {
         columns={corporationListColumns}
         title="Corporation List - All Voters"
         filterOptions={boothFilterOptions}
-        searchKeys={['Voter_Id', 'full_name', 'ENG_Full_name', 'Booth_Number', 'Booth_Name', 'Booth_Address', 'House_Number', 'updated_mobile_no', 'colony_name', 'assigned_colony_name']}
+        searchKeys={['Voter_Id', 'full_name', 'ENG_Full_name', 'Booth_Number', 'Booth_Name', 'Booth_Address', 'House_Number', 'updated_mobile_no', 'Updated_colony', 'assigned_colony_name']}
         pagination={pagination || undefined}
         onPageChange={handlePageChange}
         filterValue={selectedBooth}
-        onFilterChange={setSelectedBooth}
+        onFilterChange={handleBoothFilterChange}
+        onSearchChange={handleSearchChange}
+        searchValue={searchTerm}
         inputfiled={
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => fetchCorporationList(currentPage)}
+              onClick={() => fetchCorporationList(currentPage, 50, searchTerm)}
               disabled={corporationListLoading}
               className="px-4 py-2 text-sm font-medium text-white bg-cyan-600 border border-cyan-600 rounded-lg hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {corporationListLoading ? 'Loading...' : 'Refresh'}
             </button>
             <span className="text-sm text-gray-600">
-              Total Records: <span className="font-semibold text-cyan-600">{selectedBooth ? filteredData.length : (pagination?.totalRecords || 0)}</span>
+              Total Records: <span className="font-semibold text-cyan-600">{searchTerm || selectedBooth ? (pagination?.totalRecords || filteredData.length) : (pagination?.totalRecords || 0)}</span>
             </span>
           </div>
         }
