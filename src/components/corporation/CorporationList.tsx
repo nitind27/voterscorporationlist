@@ -69,7 +69,7 @@ const CorporationList: React.FC = () => {
 
   // Fetch Corporation List data with pagination and search
   const fetchCorporationList = useCallback(async (page: number = 1, limit: number = 50, search: string = '') => {
-    setCorporationListLoading(true);
+
     try {
       const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
       const response = await fetch(`/api/voterstatus/corporation?page=${page}&limit=${limit}${searchParam}`);
@@ -83,9 +83,7 @@ const CorporationList: React.FC = () => {
       toast.error('Failed to load corporation list');
       setCorporationListData([]);
       setPagination(null);
-    } finally {
-      setCorporationListLoading(false);
-    }
+    } 
   }, []);
 
   // Handle page change
