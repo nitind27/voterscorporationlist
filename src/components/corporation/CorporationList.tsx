@@ -5,6 +5,9 @@ import { Column } from "../tables/tabletype";
 import { Withoutbtn } from "../tables/Withoutbtn";
 import { toast } from "react-toastify";
 import Loader from "@/common/Loader";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 // Animated Card Component
 const AnimatedCard: React.FC<{
@@ -137,6 +140,7 @@ const CorporationList: React.FC = () => {
   const [transferFilter, setTransferFilter] = useState('');
   const [votersNotYetFilter, setVotersNotYetFilter] = useState('');
   const prevPercentageRef = useRef(0);
+  const lastMilestoneRef = useRef<number | null>(null);
 
   // Fetch all Corporation data for summary calculations
   const fetchAllCorporationData = useCallback(async () => {
@@ -314,6 +318,164 @@ const CorporationList: React.FC = () => {
     };
   }, [allFilteredData.length, currentPage]);
 
+  // Export to Excel function
+  const exportToExcel = useCallback(() => {
+    try {
+      // Use filtered data (allFilteredData contains all filtered records)
+      const dataToExport = allFilteredData.map((item, index) => ({
+        'Sr. No.': index + 1,
+        'Voter ID': item.Voter_Id || 'N/A',
+        'Full Name': item.full_name || 'N/A',
+        'English Name': item.ENG_Full_name || 'N/A',
+        'Age': item.Age || 'N/A',
+        'Gender': item.Gender || 'N/A',
+        'House Number': item.House_Number || 'N/A',
+        'Colony Name': item.colony_name || 'N/A',
+        'Mobile Number': item.updated_mobile_no || 'N/A',
+        'Survey Status': item.updated_at ? 'YES' : 'NO',
+        'Voting Status': item.voting_status || 'Pending',
+        'Transfer Status': String(item.inst_1_paid) === '1' ? 'Yes' : 'No',
+        'Booth Number': item.Booth_Number || 'N/A',
+        'Booth Name': item.Booth_Name || 'N/A',
+        'Booth Address': item.Booth_Address || 'N/A',
+        'Volunteer Name': item.volunteer_name || 'N/A',
+        'Volunteer Mobile': item.volunteer_mobile || 'N/A',
+      }));
+
+      // Create workbook and worksheet
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Corporation Voters');
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `Corporation_Voters_${timestamp}.xlsx`;
+
+      // Write file
+      XLSX.writeFile(wb, filename);
+      toast.success(`Excel file downloaded successfully! (${dataToExport.length} records)`);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast.error('Failed to export Excel file');
+    }
+  }, [allFilteredData]);
+
+  // Export to PDF function using html2canvas to preserve Unicode/Devanagari text
+  const exportToPDF = useCallback(async () => {
+    try {
+      if (allFilteredData.length === 0) {
+        toast.warning('No data to export');
+        return;
+      }
+
+      toast.info('Generating PDF with Unicode support...');
+
+      // Create a temporary table element with all data
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '1400px';
+      tempDiv.style.backgroundColor = '#FFFFFF';
+      tempDiv.style.padding = '20px';
+      tempDiv.style.fontFamily = 'Arial, sans-serif';
+      
+      // Create table HTML with proper structure
+      let tableHTML = `
+        <div style="margin-bottom: 20px;">
+          <h2 style="text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 10px;">Corporation Voters List</h2>
+          <p style="text-align: center; font-size: 12px; color: #666; margin-bottom: 20px;">
+            Total Records: ${allFilteredData.length} | Export Date: ${new Date().toLocaleDateString()}
+          </p>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+          <thead>
+            <tr style="background-color: #4285F4; color: #FFFFFF;">
+              <th style="padding: 8px; border: 1px solid #CCCCCC; text-align: left; font-weight: bold;">Sr. No.</th>
+              <th style="padding: 8px; border: 1px solid #CCCCCC; text-align: left; font-weight: bold;">Voter ID</th>
+              <th style="padding: 8px; border: 1px solid #CCCCCC; text-align: left; font-weight: bold;">Full Name</th>
+              <th style="padding: 8px; border: 1px solid #CCCCCC; text-align: left; font-weight: bold;">Survey Status</th>
+              <th style="padding: 8px; border: 1px solid #CCCCCC; text-align: left; font-weight: bold;">Colony Name</th>
+              <th style="padding: 8px; border: 1px solid #CCCCCC; text-align: left; font-weight: bold;">Voting Status</th>
+              <th style="padding: 8px; border: 1px solid #CCCCCC; text-align: left; font-weight: bold;">Booth Number</th>
+              <th style="padding: 8px; border: 1px solid #CCCCCC; text-align: left; font-weight: bold;">Booth Name</th>
+              <th style="padding: 8px; border: 1px solid #CCCCCC; text-align: left; font-weight: bold;">Booth Address</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      // Add table rows with data - preserve original Unicode text
+      allFilteredData.forEach((item, index) => {
+        const bgColor = index % 2 === 0 ? '#FFFFFF' : '#F5F5F5';
+        tableHTML += `
+          <tr style="background-color: ${bgColor};">
+            <td style="padding: 6px; border: 1px solid #CCCCCC;">${index + 1}</td>
+            <td style="padding: 6px; border: 1px solid #CCCCCC;">${item.Voter_Id || 'N/A'}</td>
+            <td style="padding: 6px; border: 1px solid #CCCCCC;">${item.full_name || 'N/A'}</td>
+            <td style="padding: 6px; border: 1px solid #CCCCCC;">${item.updated_at ? 'YES' : 'NO'}</td>
+            <td style="padding: 6px; border: 1px solid #CCCCCC;">${item.colony_name || 'N/A'}</td>
+            <td style="padding: 6px; border: 1px solid #CCCCCC;">${item.voting_status || 'Pending'}</td>
+            <td style="padding: 6px; border: 1px solid #CCCCCC;">${item.Booth_Number || 'N/A'}</td>
+            <td style="padding: 6px; border: 1px solid #CCCCCC;">${item.Booth_Name || 'N/A'}</td>
+            <td style="padding: 6px; border: 1px solid #CCCCCC;">${item.Booth_Address || 'N/A'}</td>
+          </tr>
+        `;
+      });
+
+      tableHTML += `
+          </tbody>
+        </table>
+      `;
+
+      tempDiv.innerHTML = tableHTML;
+      document.body.appendChild(tempDiv);
+
+      // Capture as canvas with high quality
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#FFFFFF',
+        width: tempDiv.offsetWidth,
+        height: tempDiv.scrollHeight
+      });
+
+      // Remove temporary element
+      document.body.removeChild(tempDiv);
+
+      // Calculate PDF dimensions
+      const imgWidth = 297; // A4 width in mm (landscape)
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add image to PDF
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= 297; // A4 height in mm
+
+      // Add new pages if content is longer than one page
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= 297;
+      }
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `Corporation_Voters_${timestamp}.pdf`;
+
+      // Save PDF
+      pdf.save(filename);
+      toast.success(`PDF file downloaded successfully! (${allFilteredData.length} records)`);
+    } catch (error) {
+      console.error('Error exporting to PDF:', error);
+      toast.error(`Failed to export PDF file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }, [allFilteredData]);
+
   // Calculate summary statistics (using all data, not paginated)
   const summaryStats = useMemo(() => {
     const dataToUse = selectedBooth ? allFilteredData : allCorporationData;
@@ -329,16 +491,28 @@ const CorporationList: React.FC = () => {
       ? Math.round((votingDoneCount / totalRecords) * 100)
       : 0;
 
-    // Check for percentage milestones
+    // Check for percentage milestones - only show when crossing a milestone
     const prevPercentage = prevPercentageRef.current;
-    if (votingDonePercentage > prevPercentage && votingDonePercentage > 0) {
-      // Check if we've reached a milestone (10%, 20%, 30%, etc.)
-      const milestones = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+    const milestones = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+    
+    // Initialize prevPercentage on first load to prevent showing celebration on refresh
+    if (prevPercentage === 0 && votingDonePercentage > 0) {
+      // Set to current percentage to avoid triggering on first load
+      prevPercentageRef.current = votingDonePercentage;
+      // Find the highest milestone already reached and mark it
+      const alreadyReached = milestones.filter(m => votingDonePercentage >= m);
+      if (alreadyReached.length > 0) {
+        lastMilestoneRef.current = Math.max(...alreadyReached);
+      }
+    } else if (votingDonePercentage > prevPercentage) {
+      // Only trigger celebration if we've actually crossed a milestone threshold
       const reachedMilestone = milestones.find(milestone =>
         prevPercentage < milestone && votingDonePercentage >= milestone
       );
 
-      if (reachedMilestone && !showCardCelebration) {
+      // Only show if we reached a new milestone that we haven't shown before
+      if (reachedMilestone && reachedMilestone !== lastMilestoneRef.current && !showCardCelebration) {
+        lastMilestoneRef.current = reachedMilestone;
         setCelebrationPercentage(reachedMilestone);
         setShowCardCelebration(true);
 
@@ -349,7 +523,11 @@ const CorporationList: React.FC = () => {
         }, 5000);
       }
     }
-    prevPercentageRef.current = votingDonePercentage;
+    
+    // Update previous percentage only if it actually changed
+    if (votingDonePercentage !== prevPercentage && prevPercentage !== 0) {
+      prevPercentageRef.current = votingDonePercentage;
+    }
 
     return {
       totalRecords,
@@ -742,6 +920,33 @@ const CorporationList: React.FC = () => {
             >
               {corporationListLoading ? 'Loading...' : 'Manual Refresh'}
             </button>
+
+            {/* Excel Download Button */}
+            <button
+              type="button"
+              onClick={exportToExcel}
+              disabled={allFilteredData.length === 0}
+              className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Excel
+            </button>
+
+            {/* PDF Download Button */}
+            <button
+              type="button"
+              onClick={exportToPDF}
+              disabled={allFilteredData.length === 0}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              PDF
+            </button>
+
             <span className="text-sm text-gray-600">
               Total Records: <span className="font-semibold text-cyan-600">{allFilteredData.length}</span>
             </span>
