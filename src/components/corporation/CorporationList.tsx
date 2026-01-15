@@ -207,17 +207,20 @@ const CorporationList: React.FC = () => {
   // Calculate summary statistics (using all data, not paginated)
   const summaryStats = useMemo(() => {
     const dataToUse = selectedBooth ? allFilteredData : allCorporationData;
+    // Total records
+    const totalRecords = dataToUse.length;
     // Total surveys are those with updated_at IS NOT NULL (completed surveys)
     const totalSurveyCount = dataToUse.filter(item => item.updated_at).length;
     // Voting done are those with voting_status = 'Completed' or 'Direct'
     const votingDoneCount = dataToUse.filter(item =>
       item.voting_status === 'Completed' || item.voting_status === 'Direct'
     ).length;
-    const votingDonePercentage = totalSurveyCount > 0
-      ? Math.round((votingDoneCount / totalSurveyCount) * 100)
+    const votingDonePercentage = totalRecords > 0
+      ? Math.round((votingDoneCount / totalRecords) * 100)
       : 0;
 
     return {
+      totalRecords,
       totalSurveyCount,
       votingDoneCount,
       votingDonePercentage
@@ -335,7 +338,11 @@ const CorporationList: React.FC = () => {
       {/* Summary Card */}
       <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Survey & Voting Summary</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="text-2xl font-bold text-gray-600">{summaryStats.totalRecords}</div>
+            <div className="text-sm text-gray-800">Total Records</div>
+          </div>
           <div className="bg-blue-50 rounded-lg p-4">
             <div className="text-2xl font-bold text-blue-600">{summaryStats.totalSurveyCount}</div>
             <div className="text-sm text-blue-800">Survey Completed</div>
