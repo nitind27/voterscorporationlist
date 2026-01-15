@@ -112,6 +112,15 @@ const CorporationList: React.FC = () => {
     fetchAllCorporationData();
   }, []);
 
+  // Auto-refresh summary data every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchAllCorporationData();
+    }, 5000); // 5 seconds
+
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, [fetchAllCorporationData]);
+
   // Get unique booth numbers for filter options
   const boothFilterOptions = useMemo(() => {
     const uniqueBooths = Array.from(new Set(
@@ -337,7 +346,13 @@ const CorporationList: React.FC = () => {
 
       {/* Summary Card */}
       <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Survey & Voting Summary</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-800">Survey & Voting Summary</h3>
+          <div className="flex items-center text-xs text-green-600">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
+            Auto-refresh: 5s
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="text-2xl font-bold text-gray-600">{summaryStats.totalRecords}</div>
@@ -405,7 +420,7 @@ const CorporationList: React.FC = () => {
               disabled={corporationListLoading}
               className="px-4 py-2 text-sm font-medium text-white bg-cyan-600 border border-cyan-600 rounded-lg hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {corporationListLoading ? 'Loading...' : 'Refresh'}
+              {corporationListLoading ? 'Loading...' : 'Manual Refresh'}
             </button>
             <span className="text-sm text-gray-600">
               Total Records: <span className="font-semibold text-cyan-600">{allFilteredData.length}</span>
