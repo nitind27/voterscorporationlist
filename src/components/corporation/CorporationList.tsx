@@ -130,8 +130,11 @@ const CorporationList: React.FC = () => {
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedBooth, setSelectedBooth] = useState('');
+  const [celebrationPercentage, setCelebrationPercentage] = useState<number | null>(null);
+  const [showCardCelebration, setShowCardCelebration] = useState(false);
   const [votingFilter, setVotingFilter] = useState('');
   const [surveyFilter, setSurveyFilter] = useState('');
+  const prevPercentageRef = useRef(0);
 
   // Fetch all Corporation data for summary calculations
   const fetchAllCorporationData = useCallback(async () => {
@@ -293,13 +296,35 @@ const CorporationList: React.FC = () => {
       ? Math.round((votingDoneCount / totalRecords) * 100)
       : 0;
 
+    // Check for percentage milestones
+    const prevPercentage = prevPercentageRef.current;
+    if (votingDonePercentage > prevPercentage && votingDonePercentage > 0) {
+      // Check if we've reached a milestone (10%, 20%, 30%, etc.)
+      const milestones = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+      const reachedMilestone = milestones.find(milestone =>
+        prevPercentage < milestone && votingDonePercentage >= milestone
+      );
+
+      if (reachedMilestone && !showCardCelebration) {
+        setCelebrationPercentage(reachedMilestone);
+        setShowCardCelebration(true);
+
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+          setShowCardCelebration(false);
+          setCelebrationPercentage(null);
+        }, 5000);
+      }
+    }
+    prevPercentageRef.current = votingDonePercentage;
+
     return {
       totalRecords,
       totalSurveyCount,
       votingDoneCount,
       votingDonePercentage
     };
-  }, [allCorporationData, allFilteredData, selectedBooth]);
+  }, [allCorporationData, allFilteredData, selectedBooth, showCardCelebration]);
 
   // Columns for Corporation List
   const corporationListColumns: Column<CorporationListData>[] = useMemo(() => [
@@ -409,9 +434,10 @@ const CorporationList: React.FC = () => {
     <div className="space-y-4">
       {corporationListLoading && <Loader />}
 
-      {/* Summary Card */}
-      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
+      {/* Summary Card with Celebration */}
+      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 relative overflow-hidden transition-all duration-500">
+
+        <div className="flex items-center justify-between mb-4 relative z-10">
           <h3 className="text-lg font-semibold text-gray-800">Survey & Voting Summary</h3>
           <div className="flex items-center text-xs text-green-600">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
@@ -445,6 +471,164 @@ const CorporationList: React.FC = () => {
           </AnimatedCard>
         </div>
       </div>
+
+      {/* Full Screen Celebration Overlay */}
+      {showCardCelebration && celebrationPercentage && (
+        <div className="fixed inset-0 z-50 bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600 flex items-center justify-center animate-celebration-fade-in">
+          {/* Background Flowers */}
+          <div className="absolute inset-0 overflow-hidden">
+            {Array.from({ length: 30 }).map((_, i) => (
+              <div
+                key={`bg-flower-${i}`}
+                className="absolute animate-celebration-float text-4xl opacity-20"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 4}s`,
+                  animationDuration: `${4 + Math.random() * 3}s`,
+                  transform: `rotate(${Math.random() * 360}deg)`,
+                }}
+              >
+                {['🌸', '🌺', '🌻', '🌷', '🌹', '🌼', '✨', '⭐'][i % 8]}
+              </div>
+            ))}
+          </div>
+
+          {/* Main Celebration Content */}
+          <div className="relative z-10 text-center max-w-2xl mx-auto px-8">
+            {/* Large Celebration Emoji */}
+            <div className="text-8xl mb-6 animate-celebration-bounce">🎉</div>
+
+            {/* Congratulations Title */}
+            <h1 className="text-5xl font-bold text-white mb-4 animate-celebration-slide-up drop-shadow-2xl">
+              Congratulations!
+            </h1>
+
+            {/* Achievement Message */}
+            <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-8 mb-6 animate-celebration-scale shadow-2xl">
+              <p className="text-2xl text-gray-800 mb-2 font-semibold">
+                Amazing Achievement!
+              </p>
+              <div className="text-6xl font-bold text-green-600 animate-celebration-bounce">
+                {celebrationPercentage}%
+              </div>
+              <p className="text-lg text-gray-600 mt-2">
+                Voting completion milestone achieved!
+              </p>
+            </div>
+
+            {/* Trophy and Emojis */}
+            <div className="flex justify-center items-center space-x-4 mb-8">
+              <div className="text-6xl animate-celebration-scale">🏆</div>
+              <div className="text-4xl animate-celebration-bounce" style={{ animationDelay: '0.2s' }}>🎊</div>
+              <div className="text-4xl animate-celebration-bounce" style={{ animationDelay: '0.4s' }}>🎈</div>
+              <div className="text-4xl animate-celebration-bounce" style={{ animationDelay: '0.6s' }}>🎂</div>
+              <div className="text-4xl animate-celebration-bounce" style={{ animationDelay: '0.8s' }}>🎁</div>
+            </div>
+
+            {/* Encouragement Message */}
+            <p className="text-xl text-white font-medium animate-celebration-slide-up-delayed drop-shadow-lg">
+              Keep up the excellent work! 🚀
+            </p>
+          </div>
+
+          {/* Close Button */}
+          <button
+            onClick={() => {
+              setShowCardCelebration(false);
+              setCelebrationPercentage(null);
+            }}
+            className="absolute top-6 right-6 text-white hover:text-yellow-300 transition-colors text-3xl bg-black/20 rounded-full w-12 h-12 flex items-center justify-center"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* CSS Animations for Celebration */}
+      <style jsx>{`
+        /* Celebration Card Animations */
+        @keyframes celebration-float {
+          0% {
+            transform: translateY(0) scale(0.8) rotate(0deg);
+            opacity: 0;
+          }
+          20% {
+            opacity: 1;
+          }
+          80% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(-20px) scale(1.2) rotate(360deg);
+            opacity: 0;
+          }
+        }
+        @keyframes celebration-pulse {
+          0%, 100% {
+            opacity: 0.3;
+          }
+          50% {
+            opacity: 0.6;
+          }
+        }
+        @keyframes celebration-fade-in {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        @keyframes celebration-bounce {
+          0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+          }
+          40% {
+            transform: translateY(-10px);
+          }
+          60% {
+            transform: translateY(-5px);
+          }
+        }
+        @keyframes celebration-slide-up {
+          0% {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          100% {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        @keyframes celebration-slide-up-delayed {
+          0% {
+            transform: translateY(30px);
+            opacity: 0;
+          }
+          100% {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        @keyframes celebration-scale {
+          0% {
+            transform: scale(0);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.2);
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+
+        .animate-celebration-float { animation: celebration-float 3s ease-out forwards; }
+        .animate-celebration-pulse { animation: celebration-pulse 2s ease-in-out infinite; }
+        .animate-celebration-fade-in { animation: celebration-fade-in 0.5s ease-out; }
+        .animate-celebration-bounce { animation: celebration-bounce 1s ease-in-out; }
+        .animate-celebration-slide-up { animation: celebration-slide-up 0.6s ease-out 0.2s both; }
+        .animate-celebration-slide-up-delayed { animation: celebration-slide-up-delayed 0.6s ease-out 0.4s both; }
+        .animate-celebration-scale { animation: celebration-scale 0.5s ease-out 0.6s both; }
+      `}</style>
 
       <Withoutbtn
         data={filteredData}
