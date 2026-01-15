@@ -1,10 +1,75 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Column } from "../tables/tabletype";
 import { Withoutbtn } from "../tables/Withoutbtn";
 import { toast } from "react-toastify";
 import Loader from "@/common/Loader";
+
+// Animated Card Component
+const AnimatedCard: React.FC<{
+  children: React.ReactNode;
+  value: number;
+  className?: string;
+}> = ({ children, value, className = "" }) => {
+  const [isUpdating, setIsUpdating] = useState(false);
+  const prevValueRef = useRef(value);
+
+  useEffect(() => {
+    if (prevValueRef.current !== value) {
+      setIsUpdating(true);
+      prevValueRef.current = value;
+      setTimeout(() => setIsUpdating(false), 600); // Match animation duration
+    }
+  }, [value]);
+
+  return (
+    <div className={`${className} transition-all duration-300 ${
+      isUpdating ? 'ring-2 ring-green-400 ring-opacity-50 bg-green-50 shadow-lg' : ''
+    }`}>
+      {children}
+    </div>
+  );
+};
+
+// Animated Counter Component with Slide Effect
+const AnimatedCounter: React.FC<{ value: number; duration?: number }> = ({ value, duration = 600 }) => {
+  const [displayValue, setDisplayValue] = useState(value);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const prevValueRef = useRef(value);
+
+  useEffect(() => {
+    // Always set initial value on mount
+    setDisplayValue(value);
+    prevValueRef.current = value;
+  }, []);
+
+  useEffect(() => {
+    if (prevValueRef.current === value) return; // No change, skip animation
+
+    setIsAnimating(true);
+
+    setTimeout(() => {
+      setDisplayValue(value);
+      setIsAnimating(false);
+      prevValueRef.current = value;
+    }, duration);
+
+  }, [value, duration]);
+
+  return (
+    <div className="relative inline-block overflow-hidden h-8 flex items-center justify-center">
+      <span
+        className={`inline-block transition-all duration-600 ease-in-out ${
+          isAnimating ? 'text-green-600 font-bold scale-105' : 'text-current'
+        }`}
+        style={{ width: '100%', textAlign: 'center' }}
+      >
+        {displayValue.toLocaleString()}
+      </span>
+    </div>
+  );
+};
 
 // Base interface with all fields from tbl_voters_search
 interface BaseVoterData {
@@ -354,22 +419,30 @@ const CorporationList: React.FC = () => {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-gray-600">{summaryStats.totalRecords}</div>
+          <AnimatedCard value={summaryStats.totalRecords} className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow duration-300">
+            <div className="text-2xl font-bold text-gray-600">
+              <AnimatedCounter value={summaryStats.totalRecords} duration={600} />
+            </div>
             <div className="text-sm text-gray-800">Total Records</div>
-          </div>
-          <div className="bg-blue-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-blue-600">{summaryStats.totalSurveyCount}</div>
+          </AnimatedCard>
+          <AnimatedCard value={summaryStats.totalSurveyCount} className="bg-blue-50 rounded-lg p-4 hover:shadow-md transition-shadow duration-300">
+            <div className="text-2xl font-bold text-blue-600">
+              <AnimatedCounter value={summaryStats.totalSurveyCount} duration={600} />
+            </div>
             <div className="text-sm text-blue-800">Survey Completed</div>
-          </div>
-          <div className="bg-green-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-green-600">{summaryStats.votingDoneCount}</div>
+          </AnimatedCard>
+          <AnimatedCard value={summaryStats.votingDoneCount} className="bg-green-50 rounded-lg p-4 hover:shadow-md transition-shadow duration-300">
+            <div className="text-2xl font-bold text-green-600">
+              <AnimatedCounter value={summaryStats.votingDoneCount} duration={600} />
+            </div>
             <div className="text-sm text-green-800">Voting Completed</div>
-          </div>
-          <div className="bg-purple-50 rounded-lg p-4">
-            <div className="text-2xl font-bold text-purple-600">{summaryStats.votingDonePercentage}%</div>
+          </AnimatedCard>
+          <AnimatedCard value={summaryStats.votingDonePercentage} className="bg-purple-50 rounded-lg p-4 hover:shadow-md transition-shadow duration-300">
+            <div className="text-2xl font-bold text-purple-600">
+              <AnimatedCounter value={summaryStats.votingDonePercentage} duration={600} />%
+            </div>
             <div className="text-sm text-purple-800">Voting Rate</div>
-          </div>
+          </AnimatedCard>
         </div>
       </div>
 
