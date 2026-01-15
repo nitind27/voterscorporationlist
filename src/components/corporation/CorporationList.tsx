@@ -134,6 +134,8 @@ const CorporationList: React.FC = () => {
   const [showCardCelebration, setShowCardCelebration] = useState(false);
   const [votingFilter, setVotingFilter] = useState('');
   const [surveyFilter, setSurveyFilter] = useState('');
+  const [transferFilter, setTransferFilter] = useState('');
+  const [votersNotYetFilter, setVotersNotYetFilter] = useState('');
   const prevPercentageRef = useRef(0);
 
   // Fetch all Corporation data for summary calculations
@@ -220,6 +222,19 @@ const CorporationList: React.FC = () => {
     { value: 'not_done', label: 'Not Done' },
   ];
 
+  // Transfer filter options
+  const transferFilterOptions = [
+    { value: '', label: 'All Transfer Status' },
+    { value: 'yes', label: 'Yes' },
+    { value: 'no', label: 'No' },
+  ];
+
+  // Voters not yet filter options
+  const votersNotYetFilterOptions = [
+    { value: '', label: 'All' },
+    { value: 'pending', label: 'Voters not yet' },
+  ];
+
   // Apply all filters to all data (not paginated)
   const allFilteredData = useMemo(() => {
     let filtered = allCorporationData;
@@ -251,13 +266,31 @@ const CorporationList: React.FC = () => {
       }
     }
 
+    // Apply transfer filter
+    if (transferFilter) {
+      if (transferFilter === 'yes') {
+        filtered = filtered.filter(item => String(item.inst_1_paid) === '1');
+      } else if (transferFilter === 'no') {
+        filtered = filtered.filter(item => String(item.inst_1_paid) !== '1');
+      }
+    }
+
+    // Apply voters not yet filter
+    // Shows records where inst_1_paid = 1 AND (voting_status = 'Pending' OR voting_status = 'In Transit')
+    if (votersNotYetFilter === 'pending') {
+      filtered = filtered.filter(item => 
+        String(item.inst_1_paid) === '1' &&
+        (item.voting_status === 'Pending' || item.voting_status === 'In Transit')
+      );
+    }
+
     return filtered;
-  }, [allCorporationData, selectedBooth, votingFilter, surveyFilter]);
+  }, [allCorporationData, selectedBooth, votingFilter, surveyFilter, transferFilter, votersNotYetFilter]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedBooth, votingFilter, surveyFilter]);
+  }, [selectedBooth, votingFilter, surveyFilter, transferFilter, votersNotYetFilter]);
 
   // Apply pagination to filtered data for display
   const filteredData = useMemo(() => {
@@ -640,6 +673,10 @@ const CorporationList: React.FC = () => {
         onPageChange={handlePageChange}
         filterValue={selectedBooth}
         onFilterChange={setSelectedBooth}
+        rowClassName={(item) => {
+          const isTransferred = String(item.inst_1_paid) === '1';
+          return isTransferred ? 'bg-green-100' : '';
+        }}
         inputfiled={
           <div className="flex items-center gap-4">
             {/* Voting Status Filter */}
@@ -662,6 +699,32 @@ const CorporationList: React.FC = () => {
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-black"
             >
               {surveyFilterOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Transfer Filter */}
+            <select
+              value={transferFilter}
+              onChange={(e) => setTransferFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-black"
+            >
+              {transferFilterOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Voters not yet Filter */}
+            <select
+              value={votersNotYetFilter}
+              onChange={(e) => setVotersNotYetFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-black"
+            >
+              {votersNotYetFilterOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

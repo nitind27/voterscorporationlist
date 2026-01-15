@@ -24,6 +24,7 @@ interface WithoutbtnProps<T> {
   onPageChange?: (page: number) => void;
   filterValue?: string;
   onFilterChange?: (value: string) => void;
+  rowClassName?: (item: T, index: number) => string; // Function to get row className
 }
 
 export function Withoutbtn<T>({
@@ -38,6 +39,7 @@ export function Withoutbtn<T>({
   onPageChange,
   filterValue: externalFilterValue,
   onFilterChange,
+  rowClassName,
 }: WithoutbtnProps<T>) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterValue, setFilterValue] = useState('');
@@ -132,15 +134,18 @@ export function Withoutbtn<T>({
                 </td>
               </tr>
             ) : (
-              filteredData.map((item, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  {columns.map((column) => (
-                    <td key={String(column.key)} className="px-6 py-4 whitespace-nowrap">
-                      {column.render(item, index)}
-                    </td>
-                  ))}
-                </tr>
-              ))
+              filteredData.map((item, index) => {
+                const customClassName = rowClassName ? rowClassName(item, index) : '';
+                return (
+                  <tr key={index} className={`hover:bg-gray-50 ${customClassName}`}>
+                    {columns.map((column) => (
+                      <td key={String(column.key)} className="px-6 py-4 whitespace-nowrap">
+                        {column.render(item, index)}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
